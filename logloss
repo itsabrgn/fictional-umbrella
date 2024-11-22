@@ -1,0 +1,71 @@
+from sklearn.datasets import make_classification
+from sklearn import datasets
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+import numpy as np
+
+class Logistic_Regression:
+
+    def __init__(self, lr = 0.01, num_iter = 10000, threshold=0.5):
+        self.num_iter = num_iter
+        self.threshold = threshold
+        self.lr = lr
+        self.loss = []
+
+    def Sigmoid(self, z): 
+        return 1/(1 + np.exp(z))
+    
+    def fit(self, X_train, Y_train): # gradient descent with logloss
+        train_size = Y_train.size
+        self.X_train =  np.concatenate((X_train, np.ones_like(X_train [:, 0]).reshape(train_size, 1)), axis=1) 
+        self.W = np.zeros(self.X_train.shape[-1]) 
+    
+        for iter in range(self.num_iter): 
+            self.preds = self.Sigmoid(-np.dot(self.X_train, self.W)) 
+            self.loss.append(-np.sum(Y_train * np.log(self.preds) + (1 - Y_train) * np.log(1 - self.preds)) / train_size) 
+            self.grad_W = np.matmul(self.X_train.T/train_size, self.preds - Y_train)
+            self.W = self.W - self.lr * self.grad_W
+        
+    def predict(self, X_test, probabilities = True):
+        self.X_test = np.concatenate((X_test, np.ones_like(X_test [:, 0]).reshape(X_test [:, 0].size, 1)), axis=1) 
+        if probabilities: return self.Sigmoid(-np.dot (self.X_test, self.W))
+        else: return (self.Sigmoid(-np.dot (self.X_test, self.W)) > self.threshold).astype (int)
+
+
+
+    def score(self, X_test, Y_test): 
+        preds = self.predict(X_test, probabilities = True)
+        return np.absolute(1 - Y_test - preds).mean()
+
+
+
+
+def plot_decisions(model, label, X, y):
+    
+    model.fit(X, y)
+
+    x_min, x_max = X[:, 0].min() - 0.2, X[:, 0].max() + 0.2
+    y_min, y_max = X[:, 1].min() - 0.2, X[:, 1].max() + 0.2
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01), np.arange(y_min, y_max, 0.01))
+
+    Z = model.predict(np.c_[xx.ravel(), yy.ravel()], probabilities = False).reshape(xx.shape)
+    
+    
+    plt.figure(figsize=(20, 10))
+    plt.subplot(121)
+    plt.title(f'{label}')
+    plt.scatter(X[:, 0], X[:, 1], c=y[:], edgecolors='r', s=60);
+    
+    plt.subplot(122)
+    plt.title(f'{label} with decision boundaries')
+    plt.contourf(xx, yy, Z, alpha=0.3)
+    plt.scatter(X[:, 0], X[:, 1], c=y[:], edgecolors='r', s=60);
+    
+    plt.show()
+
+
+X, Y = datasets.make_blobs(n_samples=1000, centers=2, n_features=2, center_box=(0, 8))
+
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=45)
+
+plot_decisions(Logistic_Regression (), 'LR Decision Boundary', X, Y)
